@@ -1,0 +1,38 @@
+{
+	# Internal LAN stack. HTTPS is intentionally disabled.
+	auto_https off
+}
+
+http://{$RADARR_HOST} {
+	encode zstd gzip
+	reverse_proxy radarr:7878
+}
+
+http://{$SONARR_HOST} {
+	encode zstd gzip
+	reverse_proxy sonarr:8989
+}
+
+http://{$LIDARR_HOST} {
+	encode zstd gzip
+	reverse_proxy lidarr:8686
+}
+
+http://{$NZBGET_HOST} {
+	encode zstd gzip
+	reverse_proxy nzbget:6789
+}
+
+http://{$EMBY_STREAM_HOST} {
+	encode zstd gzip
+	reverse_proxy {$EMBY_STREAM_UPSTREAM}
+}
+
+http://{$EMBY_MAIN_HOST} {
+	encode zstd gzip
+	reverse_proxy {$EMBY_MAIN_UPSTREAM}
+}
+
+:80 {
+	respond "Media reverse proxy is running. Use: {$RADARR_HOST}, {$SONARR_HOST}, {$LIDARR_HOST}, {$NZBGET_HOST}, {$EMBY_STREAM_HOST}, {$EMBY_MAIN_HOST}." 200
+}

@@ -1,0 +1,100 @@
+version: "3.8"
+
+x-common-env: &common-env
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+  TZ: ${TZ:-Africa/Johannesburg}
+  UMASK: ${UMASK:-002}
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: arr-caddy
+    restart: unless-stopped
+    depends_on:
+      - radarr
+      - sonarr
+      - lidarr
+      - nzbget
+    environment:
+      RADARR_HOST: ${RADARR_HOST:-radarr.wolf.den}
+      SONARR_HOST: ${SONARR_HOST:-sonarr.wolf.den}
+      LIDARR_HOST: ${LIDARR_HOST:-lidarr.wolf.den}
+      NZBGET_HOST: ${NZBGET_HOST:-nzbget.wolf.den}
+      EMBY_STREAM_HOST: ${EMBY_STREAM_HOST:-stream.wolf.den}
+      EMBY_MAIN_HOST: ${EMBY_MAIN_HOST:-emby.wolf.den}
+      EMBY_STREAM_UPSTREAM: ${EMBY_STREAM_UPSTREAM:-192.168.137.118:8096}
+      EMBY_MAIN_UPSTREAM: ${EMBY_MAIN_UPSTREAM:-192.168.137.110:8096}
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CONFIG_ROOT:-/srv/media-stack/config}/caddy/data:/data
+      - ${CONFIG_ROOT:-/srv/media-stack/config}/caddy/config:/config
+    networks:
+      - media
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes:
+      - ${CONFIG_ROOT:-/srv/media-stack/config}/radarr:/config
+      - ${DOWNLOAD_ROOT:-/srv/media-stack/downloads}:/data/usenet
+      - ${MOVIES_ROOT:-/mnt/cinema/movies}:/data/media/movies
+    expose:
+      - "7878"
+    networks:
+      - media
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes:
+      - ${CONFIG_ROOT:-/srv/media-stack/config}/sonarr:/config
+      - ${DOWNLOAD_ROOT:-/srv/media-stack/downloads}:/data/usenet
+      - ${SERIES_ROOT:-/mnt/cinema/series}:/data/media/series
+    expose:
+      - "8989"
+    networks:
+      - media
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes:
+      - ${CONFIG_ROOT:-/srv/media-stack/config}/lidarr:/config
+      - ${DOWNLOAD_ROOT:-/srv/media-stack/downloads}:/data/usenet
+      - ${MUSIC_ROOT:-/mnt/cinema/music}:/data/media/music
+    expose:
+      - "8686"
+    networks:
+      - media
+
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      NZBGET_USER: ${NZBGET_USER:-nzbget}
+      NZBGET_PASS: ${NZBGET_PASS:-change-this-password}
+    volumes:
+      - ${CONFIG_ROOT:-/srv/media-stack/config}/nzbget:/config
+      - ${DOWNLOAD_ROOT:-/srv/media-stack/downloads}:/data/usenet
+    expose:
+      - "6789"
+    networks:
+      - media
+
+networks:
+  media:
+    driver: bridge
